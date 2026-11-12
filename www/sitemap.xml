@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Replace ajvillam0r and coc-upgrade-timer-calculator with your GitHub account and coc-upgrade-timer-calculatorsitory name. -->
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+    <url>
+        <loc>https://ajvillam0r.github.io/coc-upgrade-timer-calculator/index.html</loc>
+        <lastmod>2026-11-13</lastmod>
+        <changefreq>monthly</changefreq>
+        <priority>1.0</priority>
+    </url>
+    <url>
+        <loc>https://ajvillam0r.github.io/coc-upgrade-timer-calculator/simple-calc.html</loc>
+        <lastmod>2026-11-13</lastmod>
+        <changefreq>monthly</changefreq>
+        <priority>0.9</priority>
+    </url>
+    <url>
+        <loc>https://ajvillam0r.github.io/coc-upgrade-timer-calculator/builder-potion.html</loc>
+        <lastmod>2026-11-13</lastmod>
+        <changefreq>monthly</changefreq>
+        <priority>0.9</priority>
+    </url>
+    <url>
+        <loc>https://ajvillam0r.github.io/coc-upgrade-timer-calculator/research-potion.html</loc>
+        <lastmod>2026-11-13</lastmod>
+        <changefreq>monthly</changefreq>
+        <priority>0.9</priority>
+    </url>
+    <url>
+        <loc>https://ajvillam0r.github.io/coc-upgrade-timer-calculator/pet-potion.html</loc>
+        <lastmod>2026-11-13</lastmod>
+        <changefreq>monthly</changefreq>
+        <priority>0.9</priority>
+    </url>
+    <url>
+        <loc>https://ajvillam0r.github.io/coc-upgrade-timer-calculator/about.html</loc>
+        <lastmod>2026-11-13</lastmod>
+        <changefreq>yearly</changefreq>
+        <priority>0.5</priority>
+    </url>
+</urlset>

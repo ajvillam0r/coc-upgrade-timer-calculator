@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- Primary SEO -->
+    <title>Upgrade Timer Calc — Free Potion &amp; Upgrade Time Calculator</title>
+    <meta name="description"
+        content="Free offline calculator that turns Builder, Research and Pet potions into exact upgrade finish times. No account, no ads, works on Android, iPhone and desktop.">
+    <meta name="robots" content="index, follow, max-image-preview:large">
+    <link rel="canonical" href="https://ajvillam0r.github.io/coc-upgrade-timer-calculator/index.html">
+
+    <!-- Open Graph / social previews -->
+    <meta property="og:site_name" content="Upgrade Timer Calc">
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="Upgrade Timer Calc — Potion &amp; Upgrade Time Calculator">
+    <meta property="og:description"
+        content="Turn potion boosts into exact upgrade completion times. Builder, Research and Pet calculators plus a day/hour/minute timer. 100% offline.">
+    <meta property="og:url" content="https://ajvillam0r.github.io/coc-upgrade-timer-calculator/index.html">
+    <meta property="og:image" content="https://ajvillam0r.github.io/coc-upgrade-timer-calculator/assets/icons/icon-512.png">
+    <meta property="og:image:width" content="512">
+    <meta property="og:image:height" content="512">
+    <meta property="og:image:alt" content="Upgrade Timer Calc app icon">
+    <meta property="og:locale" content="en_US">
+    <meta name="twitter:card" content="summary">
+    <meta name="twitter:title" content="Upgrade Timer Calc — Potion &amp; Upgrade Time Calculator">
+    <meta name="twitter:description"
+        content="Turn potion boosts into exact upgrade completion times. Builder, Research and Pet calculators plus a day/hour/minute timer. 100% offline.">
+    <meta name="twitter:image" content="https://ajvillam0r.github.io/coc-upgrade-timer-calculator/assets/icons/icon-512.png">
+
+    <!-- Installable web app (iOS Safari / Android Chrome / desktop) -->
+    <link rel="manifest" href="manifest.json">
+    <meta name="application-name" content="Upgrade Timer Calc">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-title" content="Upgrade Timer">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="format-detection" content="telephone=no">
+
+    <link rel="stylesheet" href="css/style.css">
+
+    <!-- Favicons -->
+    <link rel="icon" type="image/svg+xml" href="assets/favicon/favicon.svg">
+    <link rel="icon" type="image/png" sizes="32x32" href="assets/favicon/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="assets/favicon/favicon-16x16.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="assets/favicon/apple-touch-icon.png">
+    <link rel="icon" type="image/png" sizes="192x192" href="assets/favicon/android-chrome-192x192.png">
+
+    <!-- Windows Tile -->
+    <meta name="msapplication-TileColor" content="#0b1220">
+    <meta name="msapplication-TileImage" content="assets/favicon/mstile-144x144.png">
+
+    <!-- Theme Color (matches the app palette) -->
+    <meta name="theme-color" content="#f5f7fa" media="(prefers-color-scheme: light)">
+    <meta name="theme-color" content="#0b1220" media="(prefers-color-scheme: dark)">
+    <script defer src="js/platform.js"></script>
+    <script defer src="js/utils.js"></script>
+    <script defer src="js/floating.js"></script>
+
+    <!-- Structured data: helps Google show the app as a free WebApplication -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "WebApplication",
+      "@id": "https://ajvillam0r.github.io/coc-upgrade-timer-calculator/#app",
+      "name": "Upgrade Timer Calc",
+      "alternateName": "Upgrade Timer",
+      "url": "https://ajvillam0r.github.io/coc-upgrade-timer-calculator/",
+      "description": "Free offline calculator that turns Builder, Research and Pet potions into exact upgrade finish times, with a built-in keypad and a plain day/hour/minute timer.",
+      "applicationCategory": "UtilitiesApplication",
+      "applicationSubCategory": "Timer",
+      "operatingSystem": "Android, iOS, Web",
+      "browserRequirements": "Requires JavaScript and a modern browser",
+      "softwareVersion": "1.1.0",
+      "inLanguage": "en",
+      "isAccessibleForFree": true,
+      "offers": {
+        "@type": "Offer",
+        "price": "0",
+        "priceCurrency": "USD"
+      },
+      "featureList": [
+        "Builder Potion upgrade timer",
+        "Research Potion lab timer",
+        "Pet Potion upgrade timer",
+        "General day, hour and minute timer",
+        "Built-in numeric keypad",
+        "Android floating overlay",
+        "Works completely offline"
+      ],
+      "screenshot": "https://ajvillam0r.github.io/coc-upgrade-timer-calculator/assets/icons/icon-512.png",
+      "downloadUrl": "https://github.com/ajvillam0r/coc-upgrade-timer-calculator/releases/latest"
+    }
+    </script>
+</head>
+
+<body class="main-bg">
+    <nav class="navbar">
+        <div class="navbar__logo">Upgrade Timer Calc</div>
+        <input type="checkbox" id="nav-toggle" class="navbar__toggle">
+        <label for="nav-toggle" class="navbar__burger">
+            <span class="navbar__burger-line"></span>
+            <span class="navbar__burger-line"></span>
+            <span class="navbar__burger-line"></span>
+        </label>
+        <ul class="navbar__links">
+            <li><a href="index.html" class="navbar__link">Home</a></li>
+            <li><a href="simple-calc.html" class="navbar__link">Simple Calc</a></li>
+            <li><a href="builder-potion.html" class="navbar__link">Builder Potion</a></li>
+            <li><a href="research-potion.html" class="navbar__link">Research Potion</a></li>
+            <li><a href="pet-potion.html" class="navbar__link">Pet Potion</a></li>
+            <li><a href="about.html" class="navbar__link">About</a></li>
+        </ul>
+    </nav>
+    <main class="container container--centered">
+        <h1 class="title">Upgrade Timer Calc</h1>
+        <p class="subtitle">Turn potion boosts into exact upgrade completion times.</p>
+        <div class="grid grid--potions">
+            <a href="simple-calc.html" class="card card--main card--animated">
+                <svg class="card__icon card__icon--simple" viewBox="0 0 48 48" role="img" aria-label="Simple calculator">
+                    <circle cx="24" cy="24" r="17" fill="none" stroke="currentColor" stroke-width="3" />
+                    <path d="M24 24V13M24 24l8 5" fill="none" stroke="currentColor" stroke-width="3"
+                        stroke-linecap="round" />
+                    <circle cx="24" cy="24" r="2.6" fill="currentColor" />
+                </svg>
+                <div class="card__title">Simple Calculator</div>
+            </a>
+            <a href="builder-potion.html" class="card card--main card--animated">
+                <svg class="card__icon card__icon--builder" viewBox="0 0 48 48" role="img" aria-label="Builder potion">
+                    <rect x="13" y="10" width="22" height="9" rx="3" fill="currentColor" />
+                    <path d="M24 19v20" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" />
+                </svg>
+                <div class="card__title">Builder Potion</div>
+            </a>
+            <a href="research-potion.html" class="card card--main card--animated">
+                <svg class="card__icon card__icon--research" viewBox="0 0 48 48" role="img"
+                    aria-label="Research potion">
+                    <path d="M9 14c5-2.4 10-2.4 15 0v21c-5-2.4-10-2.4-15 0z" fill="none" stroke="currentColor"
+                        stroke-width="3" stroke-linejoin="round" />
+                    <path d="M39 14c-5-2.4-10-2.4-15 0v21c5-2.4 10-2.4 15 0z" fill="none" stroke="currentColor"
+                        stroke-width="3" stroke-linejoin="round" />
+                </svg>
+                <div class="card__title">Research Potion</div>
+            </a>
+            <a href="pet-potion.html" class="card card--main card--animated">
+                <svg class="card__icon card__icon--pet" viewBox="0 0 48 48" role="img" aria-label="Pet potion">
+                    <circle cx="15" cy="18" r="3.8" fill="currentColor" />
+                    <circle cx="24" cy="14" r="3.8" fill="currentColor" />
+                    <circle cx="33" cy="18" r="3.8" fill="currentColor" />
+                    <circle cx="37" cy="27" r="3.3" fill="currentColor" />
+                    <path d="M24 23c5.5 0 9.5 4 9.5 8.2S29.5 38 24 38s-9.5-2.6-9.5-6.8S18.5 23 24 23z"
+                        fill="currentColor" />
+                </svg>
+                <div class="card__title">Pet Potion</div>
+            </a>
+        </div>
+        <footer class="footer">
+            <p>This material is unofficial and is not endorsed by Supercell. For more information see
+                <a href="https://supercell.com/fan-content-policy" target="_blank" rel="noopener">Supercell's Fan
+                    Content Policy</a>.
+            </p>
+        </footer>
+    </main>
+</body>
+
+</html>

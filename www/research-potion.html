@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- Primary SEO -->
+    <title>Research Potion Calculator — Lab Research Timer | Upgrade Timer Calc</title>
+    <meta name="description"
+        content="Calculate exactly when a Research Potion finishes your lab upgrade. Enter potions or boost time left. Free, offline, works on any device.">
+    <meta name="robots" content="index, follow, max-image-preview:large">
+    <link rel="canonical" href="https://ajvillam0r.github.io/coc-upgrade-timer-calculator/research-potion.html">
+
+    <!-- Open Graph / social previews -->
+    <meta property="og:site_name" content="Upgrade Timer Calc">
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="Research Potion Calculator — Lab Research Timer">
+    <meta property="og:description"
+        content="Calculate exactly when a Research Potion finishes your lab upgrade. Enter potions or boost time left. Free and offline.">
+    <meta property="og:url" content="https://ajvillam0r.github.io/coc-upgrade-timer-calculator/research-potion.html">
+    <meta property="og:image" content="https://ajvillam0r.github.io/coc-upgrade-timer-calculator/assets/icons/icon-512.png">
+    <meta property="og:image:alt" content="Upgrade Timer Calc app icon">
+    <meta property="og:locale" content="en_US">
+    <meta name="twitter:card" content="summary">
+    <meta name="twitter:title" content="Research Potion Calculator — Lab Research Timer">
+    <meta name="twitter:description"
+        content="Calculate exactly when a Research Potion finishes your lab upgrade. Free and offline.">
+    <meta name="twitter:image" content="https://ajvillam0r.github.io/coc-upgrade-timer-calculator/assets/icons/icon-512.png">
+
+    <!-- Installable web app (iOS Safari / Android Chrome / desktop) -->
+    <link rel="manifest" href="manifest.json">
+    <meta name="application-name" content="Upgrade Timer Calc">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-title" content="Upgrade Timer">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="format-detection" content="telephone=no">
+
+    <link rel="stylesheet" href="css/style.css">
+    <script defer src="js/platform.js"></script>
+    <script defer src="js/alarm.js"></script>
+    <script defer src="js/utils.js"></script>
+    <script defer src="js/calculator.js"></script>
+    <script defer src="js/keypad.js"></script>
+
+    <!-- Favicons -->
+    <link rel="icon" type="image/svg+xml" href="assets/favicon/favicon.svg">
+    <link rel="icon" type="image/png" sizes="32x32" href="assets/favicon/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="assets/favicon/favicon-16x16.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="assets/favicon/apple-touch-icon.png">
+    <link rel="icon" type="image/png" sizes="192x192" href="assets/favicon/android-chrome-192x192.png">
+
+    <!-- Windows Tile -->
+    <meta name="msapplication-TileColor" content="#0b1220">
+    <meta name="msapplication-TileImage" content="assets/favicon/mstile-144x144.png">
+
+    <!-- Theme Color (matches the app palette) -->
+    <meta name="theme-color" content="#f5f7fa" media="(prefers-color-scheme: light)">
+    <meta name="theme-color" content="#0b1220" media="(prefers-color-scheme: dark)">
+    <script defer src="js/floating.js"></script>
+</head>
+
+<body class="main-bg">
+    <nav class="navbar">
+        <div class="navbar__logo">Upgrade Timer Calc</div>
+        <input type="checkbox" id="nav-toggle" class="navbar__toggle">
+        <label for="nav-toggle" class="navbar__burger">
+            <span class="navbar__burger-line"></span>
+            <span class="navbar__burger-line"></span>
+            <span class="navbar__burger-line"></span>
+        </label>
+        <ul class="navbar__links">
+            <li><a href="index.html" class="navbar__link">Home</a></li>
+            <li><a href="simple-calc.html" class="navbar__link">Simple Calc</a></li>
+            <li><a href="builder-potion.html" class="navbar__link">Builder Potion</a></li>
+            <li><a href="research-potion.html" class="navbar__link navbar__link--active">Research Potion</a></li>
+            <li><a href="pet-potion.html" class="navbar__link">Pet Potion</a></li>
+            <li><a href="about.html" class="navbar__link">About</a></li>
+        </ul>
+    </nav>
+    <main class="container">
+        <h1 class="title">Research Potion Calculator</h1>
+        <div class="tabs">
+            <button class="tabs__btn tabs__btn--active" data-tab="potion">By Potions</button>
+            <button class="tabs__btn" data-tab="boost">By Boost Time Left</button>
+        </div>
+        <div class="split-layout">
+            <div class="split-layout__left">
+                <form id="researchPotionForm" class="form card card--content" data-tab-content="potion">
+                    <div class="form__row">
+                        <div class="form__group">
+                            <label for="research-days" class="form__label">Days</label>
+                            <input type="number" class="form__input" inputmode="none" readonly id="research-days" name="days" min="0" value="" placeholder="0">
+                        </div>
+                        <div class="form__group">
+                            <label for="research-hours" class="form__label">Hours</label>
+                            <input type="number" class="form__input" inputmode="none" readonly id="research-hours" name="hours" min="0" max="23" value="" placeholder="0">
+                        </div>
+                        <div class="form__group">
+                            <label for="research-minutes" class="form__label">Minutes</label>
+                            <input type="number" class="form__input" inputmode="none" readonly id="research-minutes" name="minutes" min="0" max="59" value="" placeholder="0">
+                        </div>
+                    </div>
+                    <div class="form__row">
+                        <div class="form__group">
+                            <label for="research-potions" class="form__label">Research Potions</label>
+                            <input type="number" class="form__input" inputmode="none" readonly id="research-potions" name="potions" min="0" value="" placeholder="0">
+                        </div>
+                    </div>
+                    <button type="submit" class="btn btn--primary btn--animated">Calculate</button>
+                </form>
+                <form id="researchBoostForm" class="form card card--content form--hidden" data-tab-content="boost">
+                    <div class="form__row">
+                        <div class="form__group">
+                            <label for="research-boost-hours" class="form__label">Boost Hours Left</label>
+                            <input type="number" class="form__input" inputmode="none" readonly id="research-boost-hours" name="boost_hours" min="0" value="" placeholder="0">
+                        </div>
+                        <div class="form__group">
+                            <label for="research-boost-minutes" class="form__label">Boost Minutes Left</label>
+                            <input type="number" class="form__input" inputmode="none" readonly id="research-boost-minutes" name="boost_minutes" min="0" max="59" value="" placeholder="0">
+                        </div>
+                    </div>
+                    <div class="form__row">
+                        <div class="form__group">
+                            <label for="research-boost-days" class="form__label">Upgrade Days Left</label>
+                            <input type="number" class="form__input" inputmode="none" readonly id="research-boost-days" name="days" min="0" value="" placeholder="0">
+                        </div>
+                        <div class="form__group">
+                            <label for="research-boost-hours-upgrade" class="form__label">Upgrade Hours Left</label>
+                            <input type="number" class="form__input" inputmode="none" readonly id="research-boost-hours-upgrade" name="hours" min="0" max="23" value="" placeholder="0">
+                        </div>
+                        <div class="form__group">
+                            <label for="research-boost-minutes-upgrade" class="form__label">Upgrade Minutes Left</label>
+                            <input type="number" class="form__input" inputmode="none" readonly id="research-boost-minutes-upgrade" name="minutes" min="0" max="59" value="" placeholder="0">
+                        </div>
+                    </div>
+                    <button type="submit" class="btn btn--primary btn--animated">Calculate</button>
+                </form>
+            </div>
+            <div class="split-layout__right">
+                <div id="researchPotionResult" class="result card card--result">
+                    <div class="result__placeholder">
+                        <svg class="result__icon" viewBox="0 0 48 48" aria-hidden="true" focusable="false">
+                            <path d="M9 14c5-2.4 10-2.4 15 0v21c-5-2.4-10-2.4-15 0z" fill="none"
+                                stroke="currentColor" stroke-width="3" stroke-linejoin="round" />
+                            <path d="M39 14c-5-2.4-10-2.4-15 0v21c5-2.4 10-2.4 15 0z" fill="none"
+                                stroke="currentColor" stroke-width="3" stroke-linejoin="round" />
+                        </svg>
+                        <div class="result__text">
+                            Enter an upgrade duration and number of potions,<br>
+                            then click <b>Calculate</b>.<br>
+                            Your result will appear here!
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+    <script>
+        // Tab switching logic (same as builder-potion)
+        document.addEventListener('DOMContentLoaded', () => {
+            const tabs = document.querySelectorAll('.tabs__btn');
+            const forms = {
+                potion: document.getElementById('researchPotionForm'),
+                boost: document.getElementById('researchBoostForm')
+            };
+            tabs.forEach(tab => {
+                tab.addEventListener('click', () => {
+                    tabs.forEach(t => t.classList.remove('tabs__btn--active'));
+                    tab.classList.add('tabs__btn--active');
+                    Object.keys(forms).forEach(k => forms[k].classList.add('form--hidden'));
+                    forms[tab.dataset.tab].classList.remove('form--hidden');
+                });
+            });
+        });
+    </script>
+</body>
+
+</html>

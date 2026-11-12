@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- Primary SEO -->
+    <title>About Upgrade Timer Calc — Free Offline Upgrade Timer</title>
+    <meta name="description"
+        content="What Upgrade Timer Calc does, how it stays free and offline, and the open-source MIT licence and Supercell Fan Content Policy it is released under.">
+    <meta name="robots" content="index, follow, max-image-preview:large">
+    <link rel="canonical" href="https://ajvillam0r.github.io/coc-upgrade-timer-calculator/about.html">
+
+    <!-- Open Graph / social previews -->
+    <meta property="og:site_name" content="Upgrade Timer Calc">
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="About Upgrade Timer Calc — Free Offline Upgrade Timer">
+    <meta property="og:description"
+        content="What Upgrade Timer Calc does, how it stays free and offline, and the licences it is released under.">
+    <meta property="og:url" content="https://ajvillam0r.github.io/coc-upgrade-timer-calculator/about.html">
+    <meta property="og:image" content="https://ajvillam0r.github.io/coc-upgrade-timer-calculator/assets/icons/icon-512.png">
+    <meta property="og:image:alt" content="Upgrade Timer Calc app icon">
+    <meta property="og:locale" content="en_US">
+    <meta name="twitter:card" content="summary">
+    <meta name="twitter:title" content="About Upgrade Timer Calc — Free Offline Upgrade Timer">
+    <meta name="twitter:description"
+        content="What Upgrade Timer Calc does, how it stays free and offline, and the licences it is released under.">
+    <meta name="twitter:image" content="https://ajvillam0r.github.io/coc-upgrade-timer-calculator/assets/icons/icon-512.png">
+
+    <!-- Installable web app (iOS Safari / Android Chrome / desktop) -->
+    <link rel="manifest" href="manifest.json">
+    <meta name="application-name" content="Upgrade Timer Calc">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-title" content="Upgrade Timer">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="format-detection" content="telephone=no">
+
+    <link rel="stylesheet" href="css/style.css">
+    <script defer src="js/platform.js"></script>
+    <script defer src="js/utils.js"></script>
+    <script defer src="js/calculator.js"></script>
+
+    <!-- Favicons -->
+    <link rel="icon" type="image/svg+xml" href="assets/favicon/favicon.svg">
+    <link rel="icon" type="image/png" sizes="32x32" href="assets/favicon/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="assets/favicon/favicon-16x16.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="assets/favicon/apple-touch-icon.png">
+    <link rel="icon" type="image/png" sizes="192x192" href="assets/favicon/android-chrome-192x192.png">
+
+    <!-- Windows Tile -->
+    <meta name="msapplication-TileColor" content="#0b1220">
+    <meta name="msapplication-TileImage" content="assets/favicon/mstile-144x144.png">
+
+    <!-- Theme Color (matches the app palette) -->
+    <meta name="theme-color" content="#f5f7fa" media="(prefers-color-scheme: light)">
+    <meta name="theme-color" content="#0b1220" media="(prefers-color-scheme: dark)">
+    <script defer src="js/floating.js"></script>
+</head>
+
+<body class="main-bg">
+    <nav class="navbar">
+        <div class="navbar__logo">Upgrade Timer Calc</div>
+        <input type="checkbox" id="nav-toggle" class="navbar__toggle">
+        <label for="nav-toggle" class="navbar__burger">
+            <span class="navbar__burger-line"></span>
+            <span class="navbar__burger-line"></span>
+            <span class="navbar__burger-line"></span>
+        </label>
+        <ul class="navbar__links">
+            <li><a href="index.html" class="navbar__link">Home</a></li>
+            <li><a href="simple-calc.html" class="navbar__link">Simple Calc</a></li>
+            <li><a href="builder-potion.html" class="navbar__link">Builder Potion</a></li>
+            <li><a href="research-potion.html" class="navbar__link">Research Potion</a></li>
+            <li><a href="pet-potion.html" class="navbar__link">Pet Potion</a></li>
+            <li><a href="about.html" class="navbar__link navbar__link--active">About</a></li>
+        </ul>
+    </nav>
+    <main class="container container--centered">
+        <h1 class="title">About Upgrade Timer Calc</h1>
+        <div class="card card--content about__card">
+            <p>
+                <strong>Upgrade Timer Calc</strong> is an independent tool that turns potion boosts into exact
+                upgrade completion times. Enter how much time is left, add the potions you plan to use, and it tells
+                you precisely when the upgrade will finish — then optionally sets an alarm for that moment.<br><br>
+                Built and maintained by <strong>@ajvillam0r</strong>.
+            </p>
+            <hr class="about__divider">
+            <h2 class="about__heading">What it does</h2>
+            <ul class="about__list">
+                <li>Builder, Research and Pet potion math with configurable multipliers</li>
+                <li>Plain day / hour / minute date calculator</li>
+                <li>A floating overlay mode so the calculator stays on top of your game</li>
+                <li>One-tap alarms for the computed completion time</li>
+            </ul>
+            <hr class="about__divider">
+            <p class="about__disclaimer">
+                This material is unofficial and is not endorsed by Supercell. For more information see
+                <a href="https://supercell.com/fan-content-policy" target="_blank" rel="noopener"
+                    class="about__link">Supercell's Fan Content Policy</a>.<br>
+                All game names and trademarks belong to their respective owners.
+            </p>
+            <hr class="about__divider">
+            <div class="about__support">
+                <h2 class="about__support-title">Open-source attribution</h2>
+                <p>
+                    The calculation logic and page structure of this app are derived from
+                    <strong>Clash Potion Calculator</strong> by <strong>Lukas Mauffré</strong>, used under the MIT
+                    License.
+                </p>
+                <p>
+                    <a href="https://github.com/LukasMFR/clash-potion-calculator" target="_blank" rel="noopener"
+                        class="about__support-link">github.com/LukasMFR/clash-potion-calculator</a>
+                </p>
+                <p class="about__support-thanks">
+                    Copyright (c) 2025 Lukas Mauffré — licensed under the MIT License. The full licence text ships
+                    with this app in <code>LICENSE</code>.
+                </p>
+            </div>
+            <hr class="about__divider">
+            <p class="about__meta">
+                <strong>Version:</strong> 1.1.0<br>
+                <strong>Copyright:</strong> (c) 2026 @ajvillam0r
+            </p>
+        </div>
+        <footer class="footer">
+            <p>This material is unofficial and is not endorsed by Supercell. For more information see
+                <a href="https://supercell.com/fan-content-policy" target="_blank" rel="noopener">Supercell's Fan
+                    Content Policy</a>.
+            </p>
+        </footer>
+    </main>
+</body>
+
+</html>

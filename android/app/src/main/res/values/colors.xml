@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Upgrade Timer Calc brand palette -->
+    <color name="colorPrimary">#059669</color>
+    <color name="colorPrimaryDark">#0B1220</color>
+    <color name="colorAccent">#F59E0B</color>
+    <color name="brandSlate">#0B1220</color>
+    <color name="brandSlateLight">#16233A</color>
+    <color name="brandEmerald">#10B981</color>
+    <color name="brandAmber">#F59E0B</color>
+</resources>

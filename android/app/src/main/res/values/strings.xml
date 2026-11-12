@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Upgrade Timer Calc</string>
+    <string name="title_activity_main">Upgrade Timer Calc</string>
+    <string name="package_name">com.ajvillam0r.upgradetimercalc</string>
+    <string name="custom_url_scheme">com.ajvillam0r.upgradetimercalc</string>
+</resources>

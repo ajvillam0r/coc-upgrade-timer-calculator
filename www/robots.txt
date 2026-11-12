@@ -1,0 +1,7 @@
+# Upgrade Timer Calc — https://ajvillam0r.github.io/coc-upgrade-timer-calculator/
+# Replace ajvillam0r and coc-upgrade-timer-calculator once the coc-upgrade-timer-calculatorsitory is pushed.
+
+User-agent: *
+Allow: /
+
+Sitemap: https://ajvillam0r.github.io/coc-upgrade-timer-calculator/sitemap.xml

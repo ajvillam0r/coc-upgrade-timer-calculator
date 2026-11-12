@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 108 108" width="108" height="108" role="img" aria-label="Upgrade Timer Calc">
+    <defs>
+        <linearGradient id="utcBg" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stop-color="#16233a" />
+            <stop offset="1" stop-color="#0b1220" />
+        </linearGradient>
+    </defs>
+    <rect width="108" height="108" rx="24" fill="url(#utcBg)" />
+    <circle cx="54" cy="54" r="24" fill="none" stroke="#10b981" stroke-width="6" />
+    <path d="M54 54V41" fill="none" stroke="#f59e0b" stroke-width="6" stroke-linecap="round" />
+    <path d="M54 54l11 6" fill="none" stroke="#f59e0b" stroke-width="5" stroke-linecap="round" />
+    <circle cx="54" cy="54" r="4" fill="#10b981" />
+</svg>
