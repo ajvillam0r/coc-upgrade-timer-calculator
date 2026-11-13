@@ -33,7 +33,7 @@ app tells you the exact moment it finishes — then optionally rings an alarm.
 ## Install on Android (APK)
 
 1. Open the [latest release](https://github.com/ajvillam0r/coc-upgrade-timer-calculator/releases/latest).
-2. Download `app-debug.apk` (or the release APK attached to that release).
+2. Download **`Upgrade-Timer-Calc-v1.1.0.apk`** from the **Assets** section of that release.
 3. On your phone, tap the downloaded file.
 4. Android will ask you to allow installs from this source — allow it for your
    browser or file manager, then tap **Install**.
@@ -124,42 +124,36 @@ For a release build, create a keystore and configure a `signingConfig` in
 
 ## Publishing the web app to GitHub Pages
 
-The coc-upgrade-timer-calculatorsitory ships a ready-to-use workflow
+The repository ships a ready-to-use workflow
 (`.github/workflows/deploy-pages.yml`) that publishes the contents of `www/` as
 the site root, so the app is served at `https://ajvillam0r.github.io/coc-upgrade-timer-calculator/`.
 
-1. Push this coc-upgrade-timer-calculatorsitory to GitHub.
+1. Push this repository to GitHub.
 2. **Settings → Pages → Build and deployment → Source: GitHub Actions**.
 3. Push to `main` once more (or run the workflow manually from the **Actions**
-   tab). The site is live in about a minute.
-4. Replace the `ajvillam0r` / `coc-upgrade-timer-calculator` placeholders (see below) and push again so the
-   canonical URLs, sitemap and social cards point at the real address.
+   tab). The site is live in about a minute at
+   `https://ajvillam0r.github.io/coc-upgrade-timer-calculator/`.
 
-### Replacing the URL placeholders
+### If you fork this repository
 
-Every canonical URL, Open Graph tag, the JSON-LD block, `robots.txt` and
-`sitemap.xml` use the placeholder base:
-
-```
-https://ajvillam0r.github.io/coc-upgrade-timer-calculator/
-```
-
-Find and replace `ajvillam0r` with your GitHub ajvillam0r and `coc-upgrade-timer-calculator` with the
-coc-upgrade-timer-calculatorsitory name, then commit:
+This repository is already configured for the live site above. If you publish
+your own copy, the canonical URLs, Open Graph tags, JSON-LD block, `robots.txt`
+and `sitemap.xml` need to point at your address instead. Replace the owner and
+repository tokens and commit:
 
 ```powershell
 Get-ChildItem www -Recurse -File -Include *.html,*.txt,*.xml |
   ForEach-Object {
     $p = $_.FullName
     (Get-Content $p -Raw).
-      Replace('ajvillam0r', 'your-ajvillam0r').
-      Replace('coc-upgrade-timer-calculator', 'your-coc-upgrade-timer-calculator') |
+      Replace('ajvillam0r', '<your-username>').
+      Replace('coc-upgrade-timer-calculator', '<your-repo>') |
       Set-Content $p -NoNewline -Encoding utf8
   }
 ```
 
-The same `ajvillam0r` / `coc-upgrade-timer-calculator` tokens appear in this README's badge links and in
-`www/index.html`'s `downloadUrl`.
+The same two tokens appear in this README's badge links and in
+`www/index.html`'s `downloadUrl`, so update those too if you fork.
 
 ## Regenerating the brand assets
 
@@ -182,7 +176,7 @@ information see [Supercell's Fan Content Policy](https://supercell.com/fan-conte
 Upgrade Timer Calc is not affiliated with, endorsed, sponsored, or specifically
 approved by Supercell. All game names and trademarks belong to their respective
 owners. No game artwork, sprites, logos or proprietary fonts are included in this
-coc-upgrade-timer-calculatorsitory — every icon is an original SVG or a generated PNG.
+repository — every icon is an original SVG or a generated PNG.
 
 ### Licence
 
@@ -192,7 +186,7 @@ The calculation logic and the original page structure are derived from
 **[Clash Potion Calculator](https://github.com/LukasMFR/clash-potion-calculator)**
 by **Lukas Mauffré**, used under the MIT License. His copyright notice is
 preserved in [`LICENSE`](LICENSE) alongside the copyright for the modifications
-in this coc-upgrade-timer-calculatorsitory.
+in this repository.
 
 See [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md) for the full list of
 components and their licences.
