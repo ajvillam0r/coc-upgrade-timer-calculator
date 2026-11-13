@@ -41,7 +41,7 @@
             android:foregroundServiceType="specialUse">
             <property
                 android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
-                android:value="Upgrade timer overlay" />
+                android:value="Displays a floating Clash of Clans upgrade timer overlay on top of games" />
         </service>
     </application>
 

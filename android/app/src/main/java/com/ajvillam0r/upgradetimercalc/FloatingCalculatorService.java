@@ -9,6 +9,8 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.content.SharedPreferences;
+import android.content.pm.ServiceInfo;
 import android.content.res.Configuration;
 import android.graphics.Canvas;
 import android.graphics.Paint;
@@ -22,6 +24,7 @@ import android.os.Handler;
 import android.os.IBinder;
 import android.os.Looper;
 import android.provider.AlarmClock;
+import android.provider.Settings;
 import android.util.DisplayMetrics;
 import android.util.Log;
 import android.util.TypedValue;
@@ -60,9 +63,35 @@ public class FloatingCalculatorService extends Service {
     public static final String ACTION_STOP = "com.ajvillam0r.upgradetimercalc.STOP_FLOATING";
     /** Sent when Float Mode is requested again while the service is already alive. */
     public static final String ACTION_SHOW = "com.ajvillam0r.upgradetimercalc.SHOW_FLOATING";
+    /**
+     * Sent after an alarm intent has been launched (from AlarmPlugin or the overlay
+     * WebView). The alarm activity takes window focus away from the overlay, so the
+     * service re-asserts its WindowManager views right after it.
+     */
+    public static final String ACTION_REASSERT = "com.ajvillam0r.upgradetimercalc.REASSERT_OVERLAY";
 
     private static final int NOTIFICATION_ID = 1001;
     private static final String CHANNEL_ID = "upgrade_timer_overlay";
+    /** How often the service verifies that its overlay views are still attached. */
+    private static final long OVERLAY_WATCHDOG_INTERVAL_MS = 1500L;
+    /**
+     * The one and only overlay recovery pass after an alarm intent is launched. 850 ms
+     * lands after the silent Clock activity has finished and the game is back in front.
+     * Multiple staggered timers used to detach/re-attach the WebView several times in a
+     * row, which made the overlay blink and stutter.
+     */
+    private static final long ALARM_RECOVERY_DELAY_MS = 850L;
+    /**
+     * A/B switch for how the alarm intent is launched. PendingIntent.send() still starts the
+     * same activity, so it is not expected to change OEM overlay suppression - keep this
+     * true to test it on device and flip it to false to go back to a direct startActivity().
+     */
+    private static final boolean USE_PENDING_INTENT_FOR_ALARM = true;
+    /** Grace period before a failed overlay start is treated as fatal. */
+    private static final long OVERLAY_FAILURE_GRACE_MS = 2500L;
+    private static final String PREFS_NAME = "upgrade_timer_overlay_state";
+    private static final String PREF_OVERLAY_ACTIVE = "overlay_active";
+    private static final String PREF_OVERLAY_EXPANDED = "overlay_expanded";
     private static final int BUBBLE_SIZE_DP = 56;
     private static final int TAP_SLOP_DP = 10;
     private static final int DISMISS_SIZE_DP = 64;
@@ -104,6 +133,10 @@ public class FloatingCalculatorService extends Service {
     private int windowY = Integer.MIN_VALUE;
 
     private boolean overDismissTarget = false;
+    /** True once the user asked the service to stop, so the watchdog stops re-attaching. */
+    private boolean stopping = false;
+    /** Last overlay / foreground-service exception, surfaced in the failure toast + Logcat. */
+    private String lastOverlayError;
     private boolean scaleUpdateScheduled = false;
     private int bubbleX = 0;
     private int bubbleY = 0;
@@ -114,6 +147,52 @@ public class FloatingCalculatorService extends Service {
         public void run() {
             scaleUpdateScheduled = false;
             applyWindowScale();
+        }
+    };
+
+    /**
+     * Self-healing watchdog: for as long as the service is alive the overlay must be on
+     * screen. The check is deliberately cheap (two isAttachedToWindow() calls) so it can
+     * run continuously. Nothing in the activity lifecycle is allowed to cancel it.
+     *
+     * It is a last-resort safety net only: it never detaches a view and never touches the
+     * window when the view is still attached, so a healthy overlay is not relaid out every
+     * 1.5 s. Re-adding a view that the OEM merely demoted below the game is the alarm
+     * recovery's job, not the watchdog's.
+     */
+    private final Runnable overlayWatchdogRunnable = new Runnable() {
+        @Override
+        public void run() {
+            if (!isRunning) {
+                return;
+            }
+            watchdogAttachIfDetached();
+            mainHandler.postDelayed(this, OVERLAY_WATCHDOG_INTERVAL_MS);
+        }
+    };
+
+    /**
+     * The single recovery pass after an alarm intent is launched: one detach + re-add of
+     * the active overlay, so WindowManager hands it a brand-new window token at the top of
+     * the overlay layer. Runs once per Set Alarm, never on a repeating timer.
+     */
+    private final Runnable alarmRecoveryRunnable = this::recoverOverlayAfterAlarm;
+
+    /**
+     * Runs a couple of seconds after a start that could not place the overlay. If the
+     * watchdog managed to attach a view in the meantime this is a no-op; otherwise Float
+     * Mode is reported as failed instead of leaving a zombie service behind.
+     */
+    private final Runnable overlayStartupFailureRunnable = new Runnable() {
+        @Override
+        public void run() {
+            if (isViewPlaced(bubbleView) || isViewPlaced(windowView)) {
+                setOverlayActivePref(true);
+                return;
+            }
+            isRunning = false;
+            toast("Unable to show floating calculator" + errorSuffix());
+            stopOverlay();
         }
     };
 
@@ -130,17 +209,24 @@ public class FloatingCalculatorService extends Service {
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
+        // A fresh start command always wins over a previous shutdown request. Reset this
+        // first: it gates every re-attach attempt below.
+        stopping = false;
+        lastOverlayError = null;
+        mainHandler.removeCallbacks(overlayStartupFailureRunnable);
+
         String action = intent != null ? intent.getAction() : null;
 
         if (ACTION_STOP.equals(action)) {
-            stopSelf();
+            stopOverlay();
             return START_NOT_STICKY;
         }
 
         createNotificationChannel();
-        startForeground(NOTIFICATION_ID, buildNotification());
+        startForegroundCompat();
 
-        boolean alreadyActive = isRunning && (bubbleView != null || windowView != null);
+        boolean alreadyActive = isRunning
+            && (isViewPlaced(bubbleView) || isViewPlaced(windowView));
         if (alreadyActive) {
             // Never add a second bubble: reuse the bubble/window that already exists.
             if (isExpanded) {
@@ -149,25 +235,71 @@ public class FloatingCalculatorService extends Service {
                 // Minimized (or ACTION_SHOW requested): bring the existing window back.
                 expandCalculator();
             }
+            ensureOverlayAttached();
+            startOverlayWatchdog();
             return START_STICKY;
         }
 
         registerStopReceiver();
-        showBubble();
 
-        // Only claim the running state once the bubble is really on screen, otherwise a
-        // failed addView() would leave isRunning == true and every later start would be
-        // swallowed by the alreadyActive branch above.
-        if (bubbleView == null || bubbleView.getParent() == null) {
-            isRunning = false;
-            toast("Unable to show floating calculator");
-            stopSelf();
-            return START_NOT_STICKY;
+        // A sticky restart after the process was killed has to restore the state the user
+        // left behind: an expanded calculator stays expanded, a collapsed one stays a
+        // bubble. Without this the expanded window was simply gone forever.
+        boolean restoreExpanded = wasOverlayActive() && wasOverlayExpanded();
+        boolean placed;
+
+        if (restoreExpanded) {
+            isExpanded = false;
+            expandCalculator();
+            placed = isViewPlaced(windowView);
+            if (!placed) {
+                // Rebuilding the window failed: fall back to the bubble so the user is
+                // never left without any overlay at all.
+                ensureBubbleAttached();
+                placed = isViewPlaced(bubbleView);
+            }
+        } else {
+            showBubble();
+            placed = isViewPlaced(bubbleView);
         }
 
         isRunning = true;
+        startOverlayWatchdog();
+
+        if (!placed) {
+            // addView() really failed (or threw). The watchdog keeps retrying for the grace
+            // period, and only then is the failure reported with the actual exception.
+            mainHandler.postDelayed(overlayStartupFailureRunnable, OVERLAY_FAILURE_GRACE_MS);
+            return START_STICKY;
+        }
+
+        setOverlayActivePref(true);
 
         return START_STICKY;
+    }
+
+    private void startForegroundCompat() {
+        Notification notification = buildNotification();
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+                // targetSdk 34+: the manifest declares foregroundServiceType="specialUse", so
+                // the type must be passed explicitly as well.
+                startForeground(
+                    NOTIFICATION_ID,
+                    notification,
+                    ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE
+                );
+            } else {
+                startForeground(NOTIFICATION_ID, notification);
+            }
+        } catch (Exception e) {
+            // Never let a foreground-service problem hide the overlay behind a silent
+            // failure: log the real reason (SecurityException,
+            // MissingForegroundServiceTypeException, InvalidForegroundServiceTypeException)
+            // and keep going so the failure toast can report it.
+            lastOverlayError = describeError(e);
+            Log.e(TAG, "startForeground(type=specialUse) failed", e);
+        }
     }
 
     private void createNotificationChannel() {
@@ -310,8 +442,10 @@ public class FloatingCalculatorService extends Service {
                             bubbleParams.y = initialWindowY + (int) deltaY;
                             try {
                                 windowManager.updateViewLayout(bubble, bubbleParams);
-                            } catch (IllegalArgumentException ignored) {
-                                // View was detached while dragging.
+                            } catch (IllegalArgumentException detached) {
+                                // The bubble was detached mid-drag: put it back instead of
+                                // silently losing the overlay.
+                                ensureOverlayAttached();
                             }
                             bubbleX = bubbleParams.x;
                             bubbleY = bubbleParams.y;
@@ -382,8 +516,9 @@ public class FloatingCalculatorService extends Service {
 
         try {
             windowManager.updateViewLayout(bubbleView, bubbleParams);
-        } catch (IllegalArgumentException ignored) {
+        } catch (IllegalArgumentException detached) {
             // View was detached.
+            ensureOverlayAttached();
         }
 
         bubbleX = bubbleParams.x;
@@ -534,22 +669,23 @@ public class FloatingCalculatorService extends Service {
         removeViewSafely(bubbleView);
         bubbleView = null;
         bubbleParams = null;
+        stopOverlay();
+    }
+
+    /**
+     * Stops the service on purpose. The watchdog is cancelled first so it can never put the
+     * bubble back while the service is shutting down.
+     */
+    private void stopOverlay() {
+        stopping = true;
+        mainHandler.removeCallbacks(overlayWatchdogRunnable);
+        mainHandler.removeCallbacks(alarmRecoveryRunnable);
+        mainHandler.removeCallbacks(overlayStartupFailureRunnable);
         stopSelf();
     }
 
     private void showBubble() {
-        if (bubbleView == null) {
-            bubbleView = createBubbleView();
-        }
-        if (bubbleView.getParent() != null) {
-            return;
-        }
-        bubbleParams = getBubbleLayoutParams();
-        try {
-            windowManager.addView(bubbleView, bubbleParams);
-        } catch (Exception e) {
-            Log.e(TAG, "Unable to add floating bubble", e);
-        }
+        ensureBubbleAttached();
     }
 
     /* ---------------------------------------------------------------------
@@ -559,7 +695,9 @@ public class FloatingCalculatorService extends Service {
     private View createFloatingWindow() {
         RootLayout window = new RootLayout(this);
         window.setClipToOutline(true);
-        // The window must be focusable so the IME can type into the calculator inputs.
+        // The view tree stays focusable so in-page inputs and the keypad behave normally.
+        // The WindowManager window itself is FLAG_NOT_FOCUSABLE, so the overlay never
+        // competes with the game or the alarm screen for window focus.
         window.setFocusable(true);
         window.setFocusableInTouchMode(true);
 
@@ -717,8 +855,9 @@ public class FloatingCalculatorService extends Service {
                             windowY = windowParams.y;
                             try {
                                 windowManager.updateViewLayout(windowView, windowParams);
-                            } catch (IllegalArgumentException ignored) {
+                            } catch (IllegalArgumentException detached) {
                                 // View was detached while dragging.
+                                ensureOverlayAttached();
                             }
                         }
                         return true;
@@ -813,8 +952,9 @@ public class FloatingCalculatorService extends Service {
 
                             try {
                                 windowManager.updateViewLayout(windowView, windowParams);
-                            } catch (IllegalArgumentException ignored) {
+                            } catch (IllegalArgumentException detached) {
                                 // View was detached while resizing.
+                                ensureOverlayAttached();
                             }
 
                             scheduleScaleUpdate();
@@ -1071,9 +1211,16 @@ public class FloatingCalculatorService extends Service {
             if (windowView == null) {
                 windowView = createFloatingWindow();
             }
-            windowParams = getWindowLayoutParams();
-            if (windowView.getParent() == null) {
+            windowView.setVisibility(View.VISIBLE);
+            windowView.setAlpha(1f);
+            if (!isViewPlaced(windowView)) {
+                // Clears a stale parent left behind by a detach, then re-adds the window
+                // with freshly built params so it is never left orphaned.
+                removeViewSafely(windowView);
+                windowParams = getWindowLayoutParams();
                 windowManager.addView(windowView, windowParams);
+            } else if (windowParams == null) {
+                windowParams = getWindowLayoutParams();
             }
             isExpanded = true;
         } catch (Exception e) {
@@ -1086,6 +1233,8 @@ public class FloatingCalculatorService extends Service {
             showBubble();
             return;
         }
+
+        setOverlayExpandedPref(true);
 
         applyWindowScale();
 
@@ -1126,6 +1275,7 @@ public class FloatingCalculatorService extends Service {
 
         removeViewSafely(windowView);
         isExpanded = false;
+        setOverlayExpandedPref(false);
         showBubble();
     }
 
@@ -1248,14 +1398,17 @@ public class FloatingCalculatorService extends Service {
         windowX = x;
         windowY = y;
 
-        // No FLAG_NOT_FOCUSABLE here: the window must be focusable so the in-page keypad
-        // and taps work. FLAG_NOT_TOUCH_MODAL lets taps outside the window reach the game;
-        // no WATCH_OUTSIDE flag is used anymore.
+        // The window is intentionally NOT focusable. The in-page keypad is DOM based and the
+        // WebView never opens the system IME (readonly inputs, no input connection), so
+        // touch handling is unaffected, while the overlay stops competing for window focus
+        // with the game or with a foreign activity we launch (the Clock alarm screen).
+        // FLAG_NOT_TOUCH_MODAL lets taps outside the window reach the game.
         WindowManager.LayoutParams params = new WindowManager.LayoutParams(
             width,
             height,
             type,
-            WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL
+            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE
+                | WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL
                 | WindowManager.LayoutParams.FLAG_HARDWARE_ACCELERATED,
             PixelFormat.TRANSLUCENT
         );
@@ -1317,7 +1470,8 @@ public class FloatingCalculatorService extends Service {
     public void onConfigurationChanged(Configuration newConfig) {
         super.onConfigurationChanged(newConfig);
 
-        if (!isExpanded || windowView == null || windowView.getParent() == null) {
+        if (!isExpanded || !isViewPlaced(windowView)) {
+            ensureOverlayAttached();
             return;
         }
 
@@ -1327,6 +1481,9 @@ public class FloatingCalculatorService extends Service {
             applyWindowScale();
         } catch (Exception e) {
             Log.w(TAG, "Unable to resize floating window after rotation", e);
+            // The rotation detached the window: put it back instead of leaving the user
+            // with no overlay at all.
+            ensureOverlayAttached();
         }
     }
 
@@ -1368,7 +1525,7 @@ public class FloatingCalculatorService extends Service {
 
         @JavascriptInterface
         public void closeCalculator() {
-            mainHandler.post(FloatingCalculatorService.this::stopSelf);
+            mainHandler.post(FloatingCalculatorService.this::stopOverlay);
         }
     }
 
@@ -1378,23 +1535,449 @@ public class FloatingCalculatorService extends Service {
         }
 
         try {
-            Intent intent = new Intent(AlarmClock.ACTION_SET_ALARM);
-            intent.putExtra(AlarmClock.EXTRA_HOUR, hour);
-            intent.putExtra(AlarmClock.EXTRA_MINUTES, minute);
-            intent.putExtra(AlarmClock.EXTRA_MESSAGE,
-                message != null && !message.isEmpty() ? message : "Upgrade Complete");
-            intent.putExtra(AlarmClock.EXTRA_SKIP_UI, true);
-            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            final Intent intent = buildAlarmIntent(hour, minute, message);
 
-            if (intent.resolveActivity(getPackageManager()) != null) {
-                startActivity(intent);
-                return "{\"success\":true}";
+            if (intent.resolveActivity(getPackageManager()) == null) {
+                return "{\"success\":false,\"error\":\"No Clock app found to handle alarm\"}";
             }
 
-            return "{\"success\":false,\"error\":\"No Clock app found to handle alarm\"}";
+            // This method runs on the JavaScript bridge thread. The launch must happen on the
+            // main thread, otherwise it races the main-thread WindowManager work that keeps
+            // the overlay alive. The intent is launched from this Service's application
+            // context, so MainActivity is never brought forward.
+            mainHandler.post(() -> {
+                launchAlarmIntent(this, intent);
+
+                // Exactly one recovery pass, 850 ms later: one clean removeViewImmediate +
+                // addView, which is what puts the overlay back above Clash of Clans on
+                // OEM builds that demote our window. Everything else (the WebView page,
+                // the timer, the watchdog) is left completely alone.
+                scheduleAlarmRecovery();
+            });
+
+            return "{\"success\":true}";
         } catch (Exception e) {
             return "{\"success\":false,\"error\":\"Failed to set alarm: " + escapeJson(e.getMessage()) + "\"}";
         }
+    }
+
+    /**
+     * Launches the silent alarm intent. With {@link #USE_PENDING_INTENT_FOR_ALARM} the
+     * intent is delivered through a PendingIntent instead of a direct startActivity(); both
+     * end up starting the same Clock activity, so this only exists to A/B the behaviour on
+     * devices whose game mode reacts differently to the two paths.
+     *
+     * @return true when an intent was handed to the system.
+     */
+    static boolean launchAlarmIntent(Context context, Intent intent) {
+        if (USE_PENDING_INTENT_FOR_ALARM) {
+            try {
+                int flags = PendingIntent.FLAG_UPDATE_CURRENT;
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                    flags |= PendingIntent.FLAG_IMMUTABLE;
+                }
+                PendingIntent pending = PendingIntent.getActivity(context, 4100, intent, flags);
+                if (pending != null) {
+                    pending.send();
+                    Log.i(TAG, "Alarm launched through PendingIntent.send()");
+                    return true;
+                }
+            } catch (Exception e) {
+                Log.w(TAG, "PendingIntent alarm launch failed; falling back to startActivity", e);
+            }
+        }
+
+        try {
+            context.startActivity(intent);
+            Log.i(TAG, "Alarm launched through startActivity()");
+            return true;
+        } catch (Exception e) {
+            Log.e(TAG, "Unable to launch alarm intent", e);
+            return false;
+        }
+    }
+
+    /**
+     * Builds the silent alarm intent. FLAG_ACTIVITY_NEW_TASK is required to start an
+     * activity from a Service; the remaining flags keep the launch from being recorded in
+     * recents, from animating over the game and from stealing the game's user action.
+     */
+    private Intent buildAlarmIntent(int hour, int minute, String message) {
+        Intent intent = new Intent(AlarmClock.ACTION_SET_ALARM);
+        intent.putExtra(AlarmClock.EXTRA_HOUR, hour);
+        intent.putExtra(AlarmClock.EXTRA_MINUTES, minute);
+        intent.putExtra(AlarmClock.EXTRA_MESSAGE,
+            message != null && !message.isEmpty() ? message : "Upgrade Complete");
+        intent.putExtra(AlarmClock.EXTRA_SKIP_UI, true);
+        intent.addFlags(
+            Intent.FLAG_ACTIVITY_NEW_TASK
+                | Intent.FLAG_ACTIVITY_NO_ANIMATION
+                | Intent.FLAG_ACTIVITY_EXCLUDE_FROM_RECENTS
+                | Intent.FLAG_ACTIVITY_NO_USER_ACTION
+        );
+        return intent;
+    }
+
+    /**
+     * Arms the single post-alarm recovery pass. Any pass that is already pending is
+     * cancelled first, so repeated "Set Alarm" taps can never stack up two recoveries.
+     */
+    private void scheduleAlarmRecovery() {
+        mainHandler.removeCallbacks(alarmRecoveryRunnable);
+        mainHandler.postDelayed(alarmRecoveryRunnable, ALARM_RECOVERY_DELAY_MS);
+    }
+
+    /* ---------------------------------------------------------------------
+     * Post-alarm recovery: refresh, do not rebuild
+     * ------------------------------------------------------------------- */
+
+    /**
+     * Brings the active overlay back above the game after the silent Clock activity took
+     * window focus. Exactly one detach + re-add happens here (see
+     * {@link #recoverWindowAfterAlarm()}): a lightweight updateViewLayout() does not restore
+     * z-order on OEM builds such as Tecno HiOS game mode, which was verified on device.
+     */
+    private void recoverOverlayAfterAlarm() {
+        if (windowManager == null || stopping) {
+            return;
+        }
+        if (!canDrawOverlays()) {
+            Log.w(TAG, "alarmRecovery: overlay permission is not granted");
+            return;
+        }
+
+        if (isExpanded) {
+            recoverWindowAfterAlarm();
+        } else {
+            recoverBubbleAfterAlarm();
+        }
+    }
+
+    private void recoverWindowAfterAlarm() {
+        if (windowView == null) {
+            ensureWindowAttached();
+            return;
+        }
+
+        View view = windowView;
+        WindowManager.LayoutParams params = getWindowLayoutParams();
+
+        // A real detach is required on OEM builds (e.g. Tecno HiOS game mode): they keep the
+        // window attached while demoting it below the fullscreen game, and only a brand-new
+        // window token puts the overlay back on top. updateViewLayout() was verified on
+        // device to be ignored there, so this is the only recovery path.
+        try {
+            if (view.getParent() != null) {
+                // removeViewImmediate detaches synchronously, so the view can be added again
+                // in the same frame. removeView() defers to the next traversal and would make
+                // the addView() below throw "already attached".
+                windowManager.removeViewImmediate(view);
+            }
+        } catch (Exception e) {
+            Log.w(TAG, "alarmRecovery: removeViewImmediate failed", e);
+        }
+
+        view.setVisibility(View.VISIBLE);
+        view.setAlpha(1f);
+
+        try {
+            windowManager.addView(view, params);
+
+            windowParams = params;
+            lastOverlayError = null;
+            applyWindowScale();
+            if (webView != null) {
+                webView.onResume();
+            }
+            Log.i(TAG, "alarmRecovery: re-attached floating window");
+        } catch (Exception e) {
+            lastOverlayError = describeError(e);
+            Log.e(TAG, "alarmRecovery: unable to re-add the floating window", e);
+            // Never leave the user with nothing: drop to the icon instead.
+            collapseToBubble();
+        }
+    }
+
+    private void recoverBubbleAfterAlarm() {
+        if (bubbleView == null) {
+            ensureBubbleAttached();
+            return;
+        }
+
+        View view = bubbleView;
+        WindowManager.LayoutParams params = getBubbleLayoutParams();
+
+        try {
+            if (view.getParent() != null) {
+                windowManager.removeViewImmediate(view);
+            }
+        } catch (Exception e) {
+            Log.w(TAG, "alarmRecovery: removeViewImmediate failed", e);
+        }
+
+        view.setVisibility(View.VISIBLE);
+        view.setAlpha(1f);
+
+        try {
+            windowManager.addView(view, params);
+
+            bubbleParams = params;
+            lastOverlayError = null;
+            Log.i(TAG, "alarmRecovery: re-attached floating bubble");
+        } catch (Exception e) {
+            lastOverlayError = describeError(e);
+            Log.e(TAG, "alarmRecovery: unable to re-add the floating bubble", e);
+        }
+    }
+
+    /**
+     * Watchdog body. Add-only by construction: it can never detach a view, so the 1.5 s tick
+     * cannot cause a blink or a relayout. A view that is still attached is left completely
+     * alone, even when the OEM has demoted it behind the game - restoring that is the single
+     * post-alarm recovery's job, not the watchdog's.
+     */
+    private void watchdogAttachIfDetached() {
+        if (windowManager == null || stopping) {
+            return;
+        }
+        if (!canDrawOverlays()) {
+            Log.w(TAG, "watchdog: overlay permission is not granted");
+            return;
+        }
+
+        if (isExpanded) {
+            if (windowView == null) {
+                try {
+                    windowView = createFloatingWindow();
+                } catch (Exception e) {
+                    lastOverlayError = describeError(e);
+                    Log.e(TAG, "watchdog: unable to create the floating window", e);
+                    return;
+                }
+            }
+            windowView.setVisibility(View.VISIBLE);
+            windowView.setAlpha(1f);
+            // Attached, or already parented and just waiting for its first traversal: leave it.
+            if (windowView.isAttachedToWindow() || windowView.getParent() != null) {
+                return;
+            }
+            attachWindowFromWatchdog();
+        } else {
+            if (bubbleView == null) {
+                try {
+                    bubbleView = createBubbleView();
+                } catch (Exception e) {
+                    lastOverlayError = describeError(e);
+                    Log.e(TAG, "watchdog: unable to create the floating bubble", e);
+                    return;
+                }
+            }
+            bubbleView.setVisibility(View.VISIBLE);
+            bubbleView.setAlpha(1f);
+            if (bubbleView.isAttachedToWindow() || bubbleView.getParent() != null) {
+                return;
+            }
+            attachBubbleFromWatchdog();
+        }
+    }
+
+    /** addView without any remove: the watchdog is not allowed to detach a view. */
+    private void attachWindowFromWatchdog() {
+        windowParams = getWindowLayoutParams();
+        try {
+            windowManager.addView(windowView, windowParams);
+            lastOverlayError = null;
+            applyWindowScale();
+            if (webView != null) {
+                webView.onResume();
+            }
+            Log.i(TAG, "watchdog: re-attached floating window");
+        } catch (Exception e) {
+            lastOverlayError = describeError(e);
+            Log.e(TAG, "watchdog: unable to add the floating window", e);
+            collapseToBubble();
+        }
+    }
+
+    /** addView without any remove: the watchdog is not allowed to detach a view. */
+    private void attachBubbleFromWatchdog() {
+        bubbleParams = getBubbleLayoutParams();
+        try {
+            windowManager.addView(bubbleView, bubbleParams);
+            lastOverlayError = null;
+            Log.i(TAG, "watchdog: re-attached floating bubble");
+        } catch (Exception e) {
+            lastOverlayError = describeError(e);
+            Log.e(TAG, "watchdog: unable to add the floating bubble", e);
+        }
+    }
+
+    private void startOverlayWatchdog() {
+        mainHandler.removeCallbacks(overlayWatchdogRunnable);
+        mainHandler.postDelayed(overlayWatchdogRunnable, OVERLAY_WATCHDOG_INTERVAL_MS);
+    }
+
+    /* ---------------------------------------------------------------------
+     * Overlay self-healing
+     * ------------------------------------------------------------------- */
+
+    private boolean isViewPlaced(View view) {
+        // getParent() is assigned synchronously inside WindowManager.addView(), while
+        // isAttachedToWindow() only turns true on the next traversal (dispatchAttachedToWindow).
+        // Using isAttachedToWindow() here made every freshly added overlay look like a
+        // failure, which reported "Unable to show floating calculator" and stopped the
+        // service while the bubble was actually on screen.
+        return view != null && view.getParent() != null;
+    }
+
+    private String describeError(Exception e) {
+        String message = e.getMessage();
+        String description = e.getClass().getSimpleName()
+            + (message != null && !message.isEmpty() ? ": " + message : "");
+        return description.length() > 140 ? description.substring(0, 140) : description;
+    }
+
+    private String errorSuffix() {
+        return lastOverlayError != null ? " (" + lastOverlayError + ")" : "";
+    }
+
+    private boolean canDrawOverlays() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            return Settings.canDrawOverlays(this);
+        }
+        return true;
+    }
+
+    /**
+     * Guarantees that exactly one overlay is on screen: the expanded window while the
+     * calculator is open, otherwise the floating icon. Called by the watchdog, after an
+     * alarm launch, after rotations and from the WebView bridge.
+     */
+    private void ensureOverlayAttached() {
+        if (windowManager == null || stopping) {
+            return;
+        }
+        // Never try to add views without the permission: that would throw on every retry.
+        if (!canDrawOverlays()) {
+            Log.w(TAG, "Overlay permission was revoked; keeping views detached");
+            return;
+        }
+
+        if (isExpanded) {
+            ensureWindowAttached();
+        } else {
+            ensureBubbleAttached();
+        }
+    }
+
+    private void ensureBubbleAttached() {
+        if (isExpanded) {
+            return;
+        }
+
+        try {
+            if (bubbleView == null) {
+                bubbleView = createBubbleView();
+            }
+            bubbleView.setVisibility(View.VISIBLE);
+            bubbleView.setAlpha(1f);
+        } catch (Exception e) {
+            lastOverlayError = describeError(e);
+            Log.e(TAG, "Unable to create the floating bubble view", e);
+            return;
+        }
+
+        if (isViewPlaced(bubbleView)) {
+            return;
+        }
+
+        // Drop a stale parent left over from a detach before adding it again.
+        removeViewSafely(bubbleView);
+        bubbleParams = getBubbleLayoutParams();
+        try {
+            windowManager.addView(bubbleView, bubbleParams);
+            lastOverlayError = null;
+            Log.d(TAG, "Floating bubble attached");
+        } catch (Exception e) {
+            lastOverlayError = describeError(e);
+            Log.e(TAG, "Unable to add the floating bubble to WindowManager", e);
+        }
+    }
+
+    private void ensureWindowAttached() {
+        if (!isExpanded) {
+            return;
+        }
+
+        try {
+            if (windowView == null) {
+                windowView = createFloatingWindow();
+                windowParams = null;
+            }
+            windowView.setVisibility(View.VISIBLE);
+            windowView.setAlpha(1f);
+        } catch (Exception e) {
+            lastOverlayError = describeError(e);
+            Log.e(TAG, "Unable to create the floating calculator window", e);
+            return;
+        }
+
+        if (isViewPlaced(windowView)) {
+            // Alive and placed: nothing to do. Refreshing the layout on every watchdog tick
+            // only caused extra relayouts; the single post-alarm recovery owns that.
+            return;
+        }
+
+        removeViewSafely(windowView);
+        windowParams = getWindowLayoutParams();
+        try {
+            windowManager.addView(windowView, windowParams);
+            lastOverlayError = null;
+            Log.d(TAG, "Floating window attached");
+            applyWindowScale();
+            if (webView != null) {
+                webView.onResume();
+            }
+        } catch (Exception e) {
+            lastOverlayError = describeError(e);
+            Log.e(TAG, "Unable to add the floating window to WindowManager", e);
+            // Never leave the user with nothing: collapse to the icon instead.
+            collapseToBubble();
+        }
+    }
+
+    /* ---------------------------------------------------------------------
+     * Persisted overlay state (survives a sticky restart after process death)
+     * ------------------------------------------------------------------- */
+
+    private SharedPreferences overlayPrefs() {
+        return getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
+    }
+
+    private void setOverlayActivePref(boolean active) {
+        overlayPrefs().edit().putBoolean(PREF_OVERLAY_ACTIVE, active).apply();
+    }
+
+    private void setOverlayExpandedPref(boolean expanded) {
+        overlayPrefs().edit()
+            .putBoolean(PREF_OVERLAY_EXPANDED, expanded)
+            .putBoolean(PREF_OVERLAY_ACTIVE, true)
+            .apply();
+    }
+
+    private boolean wasOverlayActive() {
+        return overlayPrefs().getBoolean(PREF_OVERLAY_ACTIVE, false);
+    }
+
+    private boolean wasOverlayExpanded() {
+        return overlayPrefs().getBoolean(PREF_OVERLAY_EXPANDED, false);
+    }
+
+    private void clearOverlayStatePrefs() {
+        overlayPrefs().edit()
+            .putBoolean(PREF_OVERLAY_ACTIVE, false)
+            .putBoolean(PREF_OVERLAY_EXPANDED, false)
+            .apply();
     }
 
     private String escapeJson(String value) {
@@ -1551,18 +2134,27 @@ public class FloatingCalculatorService extends Service {
             return;
         }
         stopReceiver = new StopReceiver();
-        LocalBroadcastManager.getInstance(this).registerReceiver(
-            stopReceiver,
-            new IntentFilter(ACTION_STOP)
-        );
+        IntentFilter filter = new IntentFilter(ACTION_STOP);
+        filter.addAction(ACTION_REASSERT);
+        LocalBroadcastManager.getInstance(this).registerReceiver(stopReceiver, filter);
     }
 
     @Override
     public void onDestroy() {
         isRunning = false;
         isExpanded = false;
+        stopping = true;
         mainHandler.removeCallbacks(scaleUpdateRunnable);
+        mainHandler.removeCallbacks(overlayWatchdogRunnable);
+        mainHandler.removeCallbacks(alarmRecoveryRunnable);
+        mainHandler.removeCallbacks(overlayStartupFailureRunnable);
         scaleUpdateScheduled = false;
+
+        // Reaching onDestroy means the service ended on purpose (stopSelf / dismiss /
+        // stopService), so the next start begins collapsed. A process kill does not run
+        // onDestroy, which is exactly how a START_STICKY restart knows to restore the
+        // expanded window the user had open.
+        clearOverlayStatePrefs();
 
         removeViewSafely(bubbleView);
         bubbleView = null;
@@ -1609,6 +2201,12 @@ public class FloatingCalculatorService extends Service {
     private class StopReceiver extends BroadcastReceiver {
         @Override
         public void onReceive(Context context, Intent intent) {
+            String action = intent != null ? intent.getAction() : null;
+            if (ACTION_REASSERT.equals(action)) {
+                // An alarm intent was just launched: arm the single recovery pass.
+                scheduleAlarmRecovery();
+                return;
+            }
             stopSelf();
         }
     }

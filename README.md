@@ -33,7 +33,7 @@ app tells you the exact moment it finishes — then optionally rings an alarm.
 ## Install on Android (APK)
 
 1. Open the [latest release](https://github.com/ajvillam0r/coc-upgrade-timer-calculator/releases/latest).
-2. Download **`Upgrade-Timer-Calc-v1.1.0.apk`** from the **Assets** section of that release.
+2. Download **`Upgrade-Timer-Calc-v1.1.1.apk`** from the **Assets** section of that release.
 3. On your phone, tap the downloaded file.
 4. Android will ask you to allow installs from this source — allow it for your
    browser or file manager, then tap **Install**.

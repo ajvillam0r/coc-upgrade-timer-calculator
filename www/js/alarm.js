@@ -6,6 +6,10 @@ var AlarmModule = (function() {
             : null;
     }
 
+    // The native overlay service owns post-alarm recovery on its own (a single, non
+    // destructive layout refresh). The page deliberately does not ask for it: repeated
+    // re-attach requests from JS used to make the floating window blink.
+
     function isAvailable() {
         // The overlay WebView exposes the Java bridge directly.
         if (nativeBridge()) return true;

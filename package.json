@@ -1,6 +1,6 @@
 {
   "name": "upgrade-timer-calc",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "description": "Upgrade Timer Calc - an independent overlay calculator that turns potion boosts into exact upgrade completion times.",
   "main": "index.js",
   "scripts": {
