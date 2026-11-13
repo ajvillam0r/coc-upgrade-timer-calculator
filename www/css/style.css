@@ -375,19 +375,40 @@ body {
 }
 
 .form__input {
+    /* Strip the native number widget (spinners) so nothing eats the content
+       box width and pushes the centred placeholder off-axis on desktop. */
+    -webkit-appearance: none;
+    -moz-appearance: textfield;
+    appearance: textfield;
+    font-family: inherit;
     font-size: clamp(0.95rem, 2.8vw, 1.08rem);
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
     border-radius: var(--border-radius-small);
     border: 1.5px solid rgba(15, 23, 42, 0.12);
-    padding: clamp(7px, 1.8vw, 10px) clamp(6px, 2vw, 12px);
+    /* Fixed height + zero vertical padding = exact vertical centring. */
+    height: clamp(34px, 9vw, 44px);
+    padding: 0 clamp(4px, 1.6vw, 8px);
+    line-height: 1.2;
     background: rgba(255, 255, 255, 0.82);
     color: var(--text-main);
     outline: none;
-    font-weight: 600;
     box-shadow: 0 1.5px 8px 0 rgba(15, 23, 42, 0.05);
     transition: border var(--transition), box-shadow var(--transition), background var(--transition);
     width: clamp(46px, 14vw, 56px);
+    min-width: 0;
     text-align: center;
+    text-align-last: center;
     box-sizing: border-box;
+}
+
+.form__input::-webkit-outer-spin-button,
+.form__input::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    appearance: none;
+    margin: 0;
+    width: 0;
+    height: 0;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -412,6 +433,11 @@ body {
 
 /* BOUTONS */
 .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    max-width: 100%;
+    text-align: center;
     font-size: clamp(0.95rem, 2.8vw, 1.1rem);
     font-weight: 700;
     border: none;
@@ -419,10 +445,19 @@ body {
     padding: clamp(9px, 2.2vw, 12px) clamp(16px, 4.5vw, 26px);
     background: linear-gradient(120deg, var(--primary) 0%, var(--primary-dark) 100%);
     color: #fff;
+    text-decoration: none;
     cursor: pointer;
     box-shadow: 0 6px 18px -8px rgba(5, 150, 105, 0.65);
     transition: background var(--transition), transform var(--transition), box-shadow var(--transition);
     -webkit-tap-highlight-color: transparent;
+}
+
+/* Keep the label white even though the global a:hover rule would darken it. */
+.btn:hover,
+.btn:focus,
+.btn:active {
+    color: #fff;
+    text-decoration: none;
 }
 
 .btn--primary:hover,
@@ -430,6 +465,25 @@ body {
     background: var(--primary-dark);
     transform: scale(1.04);
     box-shadow: 0 10px 24px -10px rgba(5, 150, 105, 0.8);
+}
+
+/* APK download call-to-action on the home screen. */
+.install {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.55rem;
+    margin: clamp(1.2rem, 4vw, 2rem) auto 0;
+    width: 100%;
+    max-width: 440px;
+    text-align: center;
+}
+
+.install__note {
+    margin: 0;
+    font-size: clamp(0.74rem, 2.2vw, 0.84rem);
+    line-height: 1.45;
+    color: var(--text-secondary);
 }
 
 /* RESULT */
@@ -527,25 +581,17 @@ body {
     }
 }
 
-/* Petits détails pour Apple vibes */
-::-webkit-input-placeholder {
-    color: #b7bac2;
-    opacity: 1;
-}
-
-::-moz-placeholder {
-    color: #b7bac2;
-    opacity: 1;
-}
-
-:-ms-input-placeholder {
-    color: #b7bac2;
-    opacity: 1;
-}
-
+/* Placeholders: one rule instead of the old vendor-prefixed quartet. */
 ::placeholder {
     color: #b7bac2;
     opacity: 1;
+}
+
+.form__input::placeholder {
+    color: #b7bac2;
+    opacity: 1;
+    text-align: center;
+    line-height: normal;
 }
 
 a {
@@ -1075,5 +1121,27 @@ a:focus {
         padding-left: max(clamp(10px, 2.2vw, 18px), env(safe-area-inset-left, 0px));
         padding-right: max(clamp(10px, 2.2vw, 18px), env(safe-area-inset-right, 0px));
         padding-bottom: calc(clamp(40px, 7vw, 70px) + env(safe-area-inset-bottom, 0px));
+    }
+}
+
+/* KEYBOARD FOCUS
+   One visible ring for every interactive element, including the ones that
+   previously fell back to the browser default (keypad keys, tabs). */
+:where(a, button, input, [tabindex]):focus-visible {
+    outline: 2px solid var(--primary);
+    outline-offset: 2px;
+}
+
+/* The inputs already draw their own emerald ring. */
+.form__input:focus-visible {
+    outline: none;
+}
+
+/* TOUCH DEVICES
+   Phones keep :hover after a tap, which left cards stuck in the lifted state. */
+@media (hover: none) {
+    .card--main:hover,
+    .btn--primary:hover {
+        transform: none;
     }
 }

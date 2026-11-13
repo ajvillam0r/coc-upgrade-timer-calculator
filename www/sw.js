@@ -10,7 +10,7 @@
  * working with no network at all.
  */
 
-var CACHE_NAME = 'upgrade-timer-calc-v1';
+var CACHE_NAME = 'upgrade-timer-calc-v2';
 var CACHE_PREFIX = 'upgrade-timer-calc-';
 
 /* Relative to this file, so the worker also works from a GitHub Pages subpath
